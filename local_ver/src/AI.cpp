@@ -1,11 +1,11 @@
-#include "../headers.AI.h"
+#include "../headers/AI.h"
 
 AI::AI()
 {
 
 }
 
-virtual AI::~AI()
+AI::~AI()
 {
 
 }

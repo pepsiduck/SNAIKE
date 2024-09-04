@@ -2,6 +2,9 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
+#include <cstring>
+
+#include "headers/AI.h"
 
 int main(int argc, char *argv[])
 {
