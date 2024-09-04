@@ -1,9 +1,12 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <ctime>
 
 int main(int argc, char *argv[])
 {
+    
+    std::srand(std::time(0));
 
     if(argc > 1)
     {
