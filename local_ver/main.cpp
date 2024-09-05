@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "headers/AI.h"
+#include "headers/train.h"
 
 int main(int argc, char *argv[])
 {
@@ -62,7 +63,11 @@ int main(int argc, char *argv[])
     else
     {
         std::cout << "New Training" << std::endl;
-        //train()
+        if(train(2) != 0)
+        {   
+            std::cout << "Train error : Stopping" << std::endl;
+            return 1;
+        }
     }
 
     return 0;

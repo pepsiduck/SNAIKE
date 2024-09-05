@@ -9,7 +9,9 @@
 #include <vector>
 #include <utility>
 
-#define PAUSE 0.75
+#include "AI.h"
+
+#define PAUSE 0.075
 #define PLAYERS 6
 #define WIDTH 35
 #define HEIGHT 25
@@ -18,6 +20,6 @@
 
 #define GENS 10
 
-int8_t train();
+int8_t train(uint8_t arg);
 
 #endif
