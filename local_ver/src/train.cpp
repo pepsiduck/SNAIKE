@@ -149,7 +149,7 @@ int8_t train(uint8_t arg)
         //GAME
         bool cont = true;
         uint32_t game_steps = 0;
-        while(cont && game_steps < 10000)
+        while(cont && game_steps < 2500)
         {
             std::cout << "Game " << u << std::endl;
             std::cout << std::endl;

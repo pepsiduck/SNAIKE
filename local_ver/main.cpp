@@ -6,6 +6,7 @@
 
 #include "headers/AI.h"
 #include "headers/train.h"
+#include "headers/consts.h"
 
 int main(int argc, char *argv[])
 {
