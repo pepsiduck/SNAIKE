@@ -23,6 +23,45 @@ float dReLu(float arg)
     return arg >= 0;
 }
 
+float Quadratic_Cost(float a, float y)
+{
+    return (a - y)*(a - y);
+}
+
+float dQuadratic_Cost(float a, float y)
+{
+    return (a - y);
+}
+
+float Total_Quadratic_Cost(float *a, float *y, uint32_t size)
+{
+    float ret = 0.0;
+    for(uint32_t u = 0; u < size; ++u)
+    {
+        ret += (a[u] - y[u]);
+        ret *= ret;    
+    }
+    return ret;
+}
+
+float Cross_Entropy_Cost(float a, float y)
+{
+    //!TODO
+    return 0.0;
+}
+
+float dCross_Entropy_Cost(float a, float y)
+{
+    //!TODO
+    return 0.0;
+}
+
+float Total_Cross_Entropy_Cost(float *a, float *y, uint32_t size)
+{
+    //!TODO
+    return 0.0;
+}
+
 AI::AI()
 {
     r.advance = -1;
@@ -62,6 +101,9 @@ AI::~AI()
         free(weights[u3]);
     }
     weights.clear();
+    for(uint32_t u5 = 0; u5 < network_size.size() - 1; ++u5)
+        free(z[u2]);
+    z.clear();
     network_size.clear();
 }
 
@@ -138,10 +180,11 @@ std::string AI:forward_pass(std::string &env)
     {
         for(uint32_t n = 0; n < network_size[m]; ++n)
         {
-            neurons[m][n] = 0.0;
+            z[m][n] = 0.0;
             for(uint32_t o = 0; o < network_size[m - 1]; ++o)
-                neurons[m][n] += neurons[m - 1][o] * weights[m - 1][n][o];
-            neurons[m][n] = rectifiers[m - 1](neurons[m][n] + biases[m - 1][n]);
+               z[m][n] += neurons[m - 1][o] * weights[m - 1][n][o];
+            z[m][n] += biases[m - 1][n];
+            neurons[m][n] = rectifiers[m - 1](z[m][n]);
         }
     }
     
@@ -244,6 +287,27 @@ int32_t AI::initialiser()
 
     for(uint32_t u = 0; u < network_size.size() - 1; ++u)
     {
+        float *tab = (float *) malloc(network_size[u + 1] * sizeof(float));
+        if(tab == NULL)
+        {
+            std::cout << "Malloc Error"<< std::endl;
+            for(uint32_t u2 = 0; u2 < network_size.size(); ++u2)
+                free(neurons[u2]);
+            for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
+                free(biases[u3]);
+            for(uint32_t u4 = 0; u4 < network_size.size() - 1; ++u4)
+                free(z[u4]);
+            return -1;
+        }
+        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
+            tab[v] = 0.0; 
+
+        z.push_back(tab);
+
+    }
+
+    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    {
 
         float **tab2 = (float **) malloc(network_size[u + 1] * sizeof(float*));
         if(tab2 == NULL)
@@ -259,6 +323,8 @@ int32_t AI::initialiser()
                     free(weights[u4][v]);
                 free(weights[u4]);
             }
+            for(uint32_t u5 = 0; u5 < network_size.size() - 1; ++u5)
+                free(z[u5]);
             return -1;
         }
         for(uint32_t v = 0; v < network_size[u + 1]; ++v)
@@ -277,6 +343,8 @@ int32_t AI::initialiser()
                         free(weights[u4][v2]);
                     free(weights[u4]);
                 }
+                for(uint32_t u5 = 0; u5 < network_size.size() - 1; ++u5)
+                    free(z[u5]);
                 for(uint32_t v3 = 0; v3 < v; ++v3)
                     free(tab2[v3]);
                 free(tab2);
@@ -308,6 +376,9 @@ Gradient::~Gradient()
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
         free(dbiases[u]);
     dbiases.clear();
+    for(uint32_t u2 = 0; u2 < parent->network_size.size() - 1; ++u2)
+        free(d[u2]);
+    d.clear();
     for(uint32_t u3 = 0; u3 < parent->network_size.size() - 1; ++u3)
     {
         for(uint32_t u4 = 0; u4 < parent->network_size[u3 + 1]; ++u4)
@@ -317,13 +388,48 @@ Gradient::~Gradient()
     dweights.clear();
 }
 
-int8_t backward_pass(uint32_t selected)
+int8_t Gradient::backward_pass(uint32_t selected)
+{
+    
+    return 0;
+}
+
+int8_t Gradient::gradient_mult(float mult)
+{
+    for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
+    {
+        for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
+        {
+            dbiases[u][m] *= mult;
+            for(uint32_t n = 0; n < parent->network_size[u]; ++n)
+                dweights[u][m][n] *= mult;
+        }
+    }
+    return 0;
+}
+
+int8_t Gradient::gradient_add(Gradient &add)
+{
+    for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
+    {
+        for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
+        {
+            dbiases[u][m] += add.dbiases[u][m];
+            for(uint32_t n = 0; parent->network_size[u]; ++n)
+                dweights[u][m][n] += add += dweights[u][m][n];
+        }
+    }
+    return 0;
+}
+
+int8_t Gradient::gradient_set_0()
 {
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
     {
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
             dbiases[u][m] = 0.0;
+            d[u][m] = 0.0;
             for(uint32_t n = 0; parent->network_size[u]; ++n)
                 dweights[u][m][n] = 0.0;
         }
@@ -331,21 +437,21 @@ int8_t backward_pass(uint32_t selected)
     return 0;
 }
 
-int8_t gradient_add(float mult) const
+int8_t Gradient::gradient_apply() const
 {
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
     {
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
-            parent->biases[u][m] += mult * dbiases[u][m];
+            parent->biases[u][m] += dbiases[u][m];
             for(uint32_t n = 0; n < parent->network_size[u]; ++n)
-                parent->weights[u][m][n] += mult * dweights[u][m][n];
+                parent->weights[u][m][n] += dweights[u][m][n];
         }
     }
     return 0;
 }
 
-int32_t initaliser(std::vector<uint32_t> &network_size_arg)
+int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
 {
     if(network_size.size() < 2)
     {
@@ -373,11 +479,32 @@ int32_t initaliser(std::vector<uint32_t> &network_size_arg)
 
     for(uint32_t u = 0; u < network_size.size() - 1; ++u)
     {
+        float *tab = (float *) malloc(network_size[u + 1] * sizeof(float));
+        if(tab == NULL)
+        {
+            std::cout << "Malloc Error"<< std::endl;
+            for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
+                free(dbiases[u2]);
+            for(uint32_t u3 = 0; u3 < d.size(); ++u3)
+                free(d[u3]);
+            return -1;
+        }
+        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
+            tab[v] = 0.0; 
+
+        d.push_back(tab);
+
+    }
+
+    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    {
 
         float **tab2 = (float **) malloc(network_size[u + 1] * sizeof(float*));
         if(tab2 == NULL)
         {
             std::cout << "Malloc Error"<< std::endl;
+            for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
+                free(d[u2]);
             for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
                 free(dbiases[u3]);
             for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)
@@ -394,6 +521,8 @@ int32_t initaliser(std::vector<uint32_t> &network_size_arg)
             if(tab2[v] == NULL)
             {
                 std::cout << "Malloc Error"<< std::endl;
+                for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
+                    free(d[u2]);
                 for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
                     free(dbiases[u3]);
                 for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)

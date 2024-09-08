@@ -24,6 +24,14 @@ float ReLu(float arg);
 float dsigmoid(float arg);
 float dReLu(float arg);
 
+float Quadratic_Cost(float a, float y);
+float dQuadratic_Cost(float a, float y);
+float Total_Quadratic_Cost(float *a, float *y, uint32_t size);
+
+float Cross_Entropy_Cost(float a, float y);
+float dCross_Entropy_Cost(float a, float y);
+float Total_Cross_Entropy_Cost(float *a, float *y, uint32_t size);
+
 class AI
 {
 public:
@@ -44,6 +52,7 @@ public:
     reward_repartition r;
     std::vector<uint32_t> network_size;
     std::vector<float*> neurons;
+    std::vector<float*> z;
     std::vector<float**> weights;
     std::vector<float*> biases;
     std::vector<float (*)(float)> rectifiers;
@@ -60,13 +69,17 @@ public:
     Gradient(AI *arg);
     virtual ~Gradient();
     int8_t backward_pass(uint32_t selected);
-    int8_t gradient_add(float mult) const;
+    int8_t gradient_mult(float mult);
+    int8_t gradient_add(Gradient &add);
+    int8_t gradient_set_0();
+    int8_t gradient_apply() const;
     int32_t initaliser(std::vector<uint32_t> &network_size_arg);
 
     //!VAR
 
     std::vector<float**> dweights;
     std::vector<float*> dbiases;
+    std::vector<float*> d;
     AI* parent;
 protected:
 };
