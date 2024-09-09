@@ -388,9 +388,48 @@ Gradient::~Gradient()
     dweights.clear();
 }
 
-int8_t Gradient::backward_pass(uint32_t selected)
+int8_t Gradient::backward_pass(uint32_t selected, bool quad)
 {
-    
+    if(gradient_set_0() != 0)
+        return -1;
+
+    //first
+
+    for(uint32_t u = 0; u < parent->network_size[parent->network_size.size() - 1]; ++u)
+    {
+
+        //d
+        if(quad)
+            d[parent->network_size.size() - 2][u] = dQuadratic_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]);
+        else
+            d[parent->network_size.size() - 2][u] = dCross_Entropy_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]); 
+
+        //db
+        dbiases[parent->network_size.size() - 2][u] = d[parent->network_size.size() - 2][u];
+
+        //dw 
+        for(uint32_t x = 0; x < parent->network_size[parent->network_size.size() - 2]; ++x)
+            dweights[parent->network_size.size() - 2][u][x] = d[parent->network_size.size() - 2][u] * parent->neurons[parent->network_size.size() - 2][x];  
+    }
+
+    for(uint32_t c = parent->network_size.size() - 3; c >= 0; --c)
+    {
+        for(uint32_t u = 0; u < parent->network_size[c + 1]; ++u)
+        {
+            //d
+            for(uint32_t v = 0; v < parent->network_size[c + 2]; ++v)
+                d[c][u] += d[c + 1][v] * parent->weights[c + 1][v][c];
+            d[c][u] *= parent->drectifiers[c](parent->z[c][u]);
+
+            //b
+            dbiases[c][u] = d[c][u];
+
+            //dw
+            for(uint32_t w = 0; w < parent->network_size[c]; ++w)
+                dweights[c][u][w] = d[c][u] * parent->neurons[c][w];
+        }
+        
+    }
     return 0;
 }
 
@@ -443,9 +482,9 @@ int8_t Gradient::gradient_apply() const
     {
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
-            parent->biases[u][m] += dbiases[u][m];
+            parent->biases[u][m] -= dbiases[u][m];
             for(uint32_t n = 0; n < parent->network_size[u]; ++n)
-                parent->weights[u][m][n] += dweights[u][m][n];
+                parent->weights[u][m][n] -= dweights[u][m][n];
         }
     }
     return 0;
