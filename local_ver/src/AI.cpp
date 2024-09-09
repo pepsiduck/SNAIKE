@@ -86,6 +86,12 @@ AI::AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vec
         exit(1);
 }
 
+AI(reward_repartition rep, std::string filename, float epsilon_arg) : r(rep), epsilon(epsilon_arg);
+{
+    if(initialiser(filename) == -1)
+        exit(1);
+}
+
 AI::~AI()
 {
     for(uint32_t u = 0; u < network_size.size(); ++u)
@@ -362,6 +368,287 @@ int32_t AI::initialiser()
 
     return 0;
     
+}
+
+int32_t initialiser(std::string filepath)
+{
+    FILE *fp = std::fopen(filename.c_str(), "rb");
+    if(fp == NULL)
+    {
+        std::cout << "Could not open AI file" << std::endl;
+        return -1;
+    }
+
+    std::fseek(fp,0,SEEK_END);
+    long size = std::ftell(fp);
+    std::fseek(fp,0,SEEK_SET);
+
+    size_t buffer;
+    if(std::fread((void*) (&buffer), sizeof(size_t), 1, fp) != 0)
+    {
+        std::cout << "Could not read AI file" << std::endl;
+        fp.close();
+        return -1;
+    }
+    if(size - std::ftell(fp) < sizeof(uint32_t) * buffer)
+    {
+        std::cout << "Could not read AI file" << std::endl;
+        fp.close();
+        return -1;
+    }
+
+    uint32_t buffer2;
+    for(uint32_t u = 0; u < buffer; ++u)
+    {
+        if(std::fread((void*) (&buffer2), sizeof(uint32_t), 1, fp) != 0)
+        {
+            std::cout << "Could not read AI file" << std::endl;
+            fp.close();
+            return -1;
+        }
+        network_size.push_back(buffer2);
+    }
+
+    if(size - std::ftell(fp) < sizeof(uint8_t) * (buffer - 1))
+    {
+        std::cout << "Could not read AI file" << std::endl;
+        fp.close();
+        return -1;
+    }
+
+    uint8_t buffer3;
+    for(uint32_t u = 0; u < buffer - 1; ++u)
+    {
+        if(std::fread((void*) (&buffer3), sizeof(uint8_t), 1, fp) != 0)
+        {
+            std::cout << "Could not read AI file" << std::endl;
+            fp.close();
+            return -1;
+        }
+        if(buffer3 == 0)
+        {
+            rectifiers.push_back(sigmoid);
+            drectifiers.push_back(dsigmoid);
+        }
+        else if(buffer3 == 1)
+        {
+            rectifiers.push_back(ReLu);
+            drectifiers.push_back(dReLu);
+        }
+    }
+
+    uint32_t nb = 0;
+    for(uint32_t u = 0; u < buffer - 1; ++u)
+        nb += (network_size[u] + 1) * network_size[u + 1];
+
+    if(size - std::ftell(fp) < sizeof(float) * nb)
+    {
+        std::cout << "Could not read AI file" << std::endl;
+        fp.close();
+        return -1;
+    }
+
+    for(uint32_t u = 0; u < buffer - 1; ++u)
+    {
+        float *tab = (float *) malloc(network_size[u + 1] * sizeof(float));
+        if(tab == NULL)
+        {
+            std::cout << "Malloc error" << std::endl;
+            for(uint32_t v = 0; v < biases.size(); ++v)
+                free(biases[v]);
+            fp.close();
+            return -1;
+        }
+        if(fread((void*) tab, sizeof(float), network_size[u + 1],fp) != 0)
+        {
+            std::cout << "Could not read AI file" << std::endl;
+            for(uint32_t v = 0; v < biases.size(); ++v)
+                free(biases[v]);
+            fp.close();
+            return -1;
+        }
+        biases.push_back(tab);
+    }
+
+    for(uint32_t u = 0; u < buffer - 1; ++u)
+    {
+        float **tab2 = (float **) malloc(network_size[u + 1] * sizeof(float*));  
+        if(tab2 == NULL)
+        {
+            std::cout << "Malloc error" << std::endl;
+            for(uint32_t v = 0; v < biases.size(); ++v)
+                free(biases[v]);
+            for(uint32_t v = 0; v < weight.size(); ++v)
+            {
+                for(uint32_t w = 0; w < network_size[v + 1]; ++w)
+                    free(weights[v][w]);
+                free(weights[v]);
+            }
+            fp.close();
+            return -1;
+        }
+        for(uint32_t u2 = 0; u2 < network_size[u + 1]; ++u2)
+        {
+            tab2[u2] = (float*) malloc(network_size[u] * sizeof(float));
+            if(tab2[u2] == NULL)
+            {
+                std::cout << "Malloc error" << std::endl;
+                for(uint32_t v = 0; v < biases.size(); ++v)
+                    free(biases[v]);
+                for(uint32_t v = 0; v < weight.size(); ++v)
+                {
+                    for(uint32_t w = 0; w < network_size[v + 1]; ++w)
+                        free(weights[v][w]);
+                    free(weights[v]);
+                }
+                for(uint32_t u3 = 0; u3 < u2; ++u3)
+                    free(tab2[u3]);
+                free(tab2);
+                fp.close();
+                return -1;
+            }
+            if(fread((void*) tab[u2], sizeof(float), network_size[u], fp) != 0)
+            {
+                std::cout << "Could not read in AI file" << std::endl;
+                for(uint32_t v = 0; v < biases.size(); ++v)
+                    free(biases[v]);
+                for(uint32_t v = 0; v < weight.size(); ++v)
+                {
+                    for(uint32_t w = 0; w < network_size[v + 1]; ++w)
+                        free(weights[v][w]);
+                    free(weights[v]);
+                }
+                for(uint32_t u3 = 0; u3 < u2; ++u3)
+                    free(tab2[u3]);
+                free(tab2);
+                fp.close();
+                return -1;
+            }
+        }
+        weights.push_back(tab2);
+    }
+
+    fp.close();
+
+    for(uint32_t u = 0; u < buffer; ++u)
+    {
+        float *tab3 = (float*) malloc(network_size[u] * sizeof(float));
+        if(tab3 == NULL)
+        {
+            std::cout << "Malloc error" << std::endl;
+            for(uint32_t v = 0; v < biases.size(); ++v)
+                free(biases[v]);
+            for(uint32_t v = 0; v < weight.size(); ++v)
+            {
+                for(uint32_t w = 0; w < network_size[v + 1]; ++w)
+                    free(weights[v][w]);
+                free(weights[v]);
+            }
+            for(uint32_t v = 0; v < neurons.size(); ++v)
+                free(neurons[v]);
+            for(uint32_t v = 0; v < z.size(); ++v)
+                free(z[v]);
+            return -1;
+        }
+        for(uint32_t v = 0; v < network_size[u]; ++v)
+            tab3[v] = 0.0;
+        neurons.push_back(tab3);
+        
+        tab3 = (float*) malloc(network_size[u] * sizeof(float));
+        if(tab3 == NULL)
+        {
+            std::cout << "Malloc error" << std::endl;
+            for(uint32_t v = 0; v < biases.size(); ++v)
+                free(biases[v]);
+            for(uint32_t v = 0; v < weight.size(); ++v)
+            {
+                for(uint32_t w = 0; w < network_size[v + 1]; ++w)
+                    free(weights[v][w]);
+                free(weights[v]);
+            }
+            for(uint32_t v = 0; v < neurons.size(); ++v)
+                free(neurons[v]);
+            for(uint32_t v = 0; v < z.size(); ++v)
+                free(z[v]);
+            return -1;
+        }
+        for(uint32_t v = 0; v < network_size[u]; ++v)
+            tab3[v] = 0.0;
+        z.push_back(tab3);
+    }
+
+
+    return 0;
+}
+
+int32_t write(std::string filename) const
+{
+    FILE *fp = std::fopen(filename.c_str(), "wb");
+    if(fp == NULL)
+    {
+        std::cout << "Could not create AI file" << std::endl;
+        return -1;
+    }
+
+    if(std::fwrite((void *) (&network_size.size), sizeof(network_size.size()), 1, fp) != 0)
+    {
+        std::cout << "Could not write in AI file" << std::endl;
+        fp.close();
+        std::system("rm -f " + filepath);
+        return -1;
+    }
+
+    if(std::fwrite(network_size.data(), sizeof(network_size[0]), network_size.size(), fp) != 0)
+    {
+        std::cout << "Could not write in AI file" << std::endl;
+        fp.close();
+        std::system("rm -f " + filepath);
+        return -1;
+    }
+
+    uint8_t elem;
+    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    {
+        if(rectifiers[u] == sigmoid)
+            elem = 0;
+        else if(rectifiers[u] == ReLu)
+            elem = 1;
+        if(std::fwrite((void *) (&elem), sizeof(uint8_t), 1, fp) != 0)
+        {
+            std::cout << "Could not write in AI file" << std::endl;
+            fp.close();
+            std::system("rm -f " + filepath);
+            return -1;
+        }
+    }
+
+    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    {
+        if(std::fwrite(biases[u], sizeof(float), network_size[u + 1], fp) != 0)
+        {
+            std::cout << "Could not write in AI file" << std::endl;
+            fp.close();
+            std::system("rm -f " + filepath);
+            return -1;
+        }
+    }
+
+    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    {
+        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
+        {
+            if(std::fwrite(weights[u][v], sizeof(float), network_size[u], fp) != 0)
+            {
+                std::cout << "Could not write in AI file" << std::endl;
+                fp.close();
+                std::system("rm -f " + filepath);
+                return -1;
+            }
+        }
+    }
+
+    std::fclose(fp);
+    return 0;
 }
 
 Gradient::Gradient(AI *arg)

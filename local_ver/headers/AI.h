@@ -24,6 +24,13 @@ float ReLu(float arg);
 float dsigmoid(float arg);
 float dReLu(float arg);
 
+/*
+*
+*   sigmoid = 0
+*
+*   ReLu = 1
+*/
+
 float Quadratic_Cost(float a, float y);
 float dQuadratic_Cost(float a, float y);
 float Total_Quadratic_Cost(float *a, float *y, uint32_t size);
@@ -39,12 +46,15 @@ public:
 
     AI();
     AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vector<float (*)(float)> &rectifiers_arg, std::vector<float (*)(float)> &drectifiers_arg, float epsilon_arg);
+    AI(reward_repartition rep, std::string filename, float epsilon_arg);
     virtual ~AI();
     std::string action(std::string &env);
     std::string forward_pass(std::strin &env);
     float getEpsilon() const;
     void setEpsilon(float arg);
     int32_t initialiser();
+    int32_t initialiser(std::string filepath);
+    int32_t write(std::string filename) const;
     
 
     //!VAR
