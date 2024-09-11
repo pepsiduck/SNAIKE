@@ -1,0 +1,100 @@
+std::cout << "Game " << u << std::endl;
+            std::cout << std::endl;
+
+            //DISPLAY
+            
+
+            if(system("clear") != 0)
+            {
+                std::cout << "Clear Error" << std::endl;
+                return -1;
+            }
+
+            std::string display(WIDTH * HEIGHT, '0');
+            for(uint32_t a = 0; a < NB_APPLES; ++a)
+                display[apples[a].first + WIDTH * apples[a].second] = '1';
+            for(uint32_t w = 0; w < NB_WALLS; ++w)
+                display[walls[w].first + WIDTH * walls[w].second] = '2';
+
+            for(uint32_t p = 0; p < PLAYERS; ++p)
+            {
+                if(!alive[p])
+                    continue;
+                display[snakes[p][0].first + WIDTH * snakes[p][0].second] = char('A' + p);
+                for(uint32_t b = 1; b < snakes[p].size(); ++b)
+                    display[snakes[p][b].first + WIDTH * snakes[p][b].second] = char('a' + p);
+            }
+
+           if(arg > 0)
+           {     
+
+                for(int32_t h = 0; h < HEIGHT; ++h)
+                {
+                    for(int32_t w = 0; w < WIDTH; ++w)
+                    {
+                        std::string color = "\033[1;37m";
+
+                        if(arg > 1)
+                        {
+
+                            bool check = true;
+
+                            for(uint32_t w2 = 0; w2 < NB_WALLS; ++w2)
+                            {
+                                if(walls[w2].first == w && walls[w2].second == h)
+                                {
+                                    color = "\033[1;30m";
+                                    check = false;
+                                    break;
+                                }
+                            }
+
+                            if(check)
+                            {
+                                for(uint32_t a = 0; a < NB_APPLES; ++a)
+                                {
+                                    if(apples[a].first == w && apples[a].second == h)
+                                    {
+                                        color = "\033[1;41m";
+                                        check = false;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if(check)
+                            {
+                                for(uint32_t p = 0; p < PLAYERS; ++p)
+                                {
+                                    if(!check || !alive[p])
+                                        continue;
+                                    for(uint32_t b = 0; b < snakes[p].size(); ++b)
+                                    {
+                                        if(snakes[p][b].first == w && snakes[p][b].second == h)
+                                        {
+                                            color = "\033[1;" + std::to_string(31 + p) + "m";
+                                            check = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+
+                        std::cout << color << display[w + WIDTH * h] << "\033[0m";
+                    }
+                    std::cout << std::endl;
+                }
+
+                std::cout << std::endl;
+                for(uint32_t p = 0; p < PLAYERS; ++p)
+                {
+                    std::cout << "Player \033[1;" << std::to_string(31 + p) << "m" << char('A' + p) << "\033[0m Size : " << snakes[p].size() << " Status : ";
+                    if(alive[p])
+                        std::cout << "Alive" << std::endl;
+                    else
+                        std::cout << "Dead" << std::endl;
+                }
+
+            }

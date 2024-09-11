@@ -64,7 +64,11 @@ int main(int argc, char *argv[])
     else
     {
         std::cout << "New Training" << std::endl;
-        if(train(2) != 0)
+        std::string input;
+        std::cout << "AI file name" << std::endl;
+        std::cin >> input;
+        input = "../AIfiles/" + input + ".ai";
+        if(train(input) != 0)
         {   
             std::cout << "Train error : Stopping" << std::endl;
             return 1;

@@ -76,17 +76,18 @@ AI::AI()
     drectifiers.push_back(dsigmoid);
     drectifiers.push_back(dsigmoid);
     epsilon = 1;
+    discount = 0.75;
     if(initialiser() == -1)
         exit(1);
 }
 
-AI::AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vector<float (*)(float)> &rectifiers_arg, std::vector<float (*)(float)> &drectifiers_arg, float epsilon_arg) : r(rep), network_size(network_size_arg), rectifiers(rectifiers_arg), drectifiers(drectifiers_arg), epsilon(epsilon_arg)
+AI::AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vector<float (*)(float)> &rectifiers_arg, std::vector<float (*)(float)> &drectifiers_arg, float epsilon_arg, float discount_arg) : r(rep), network_size(network_size_arg), rectifiers(rectifiers_arg), drectifiers(drectifiers_arg), epsilon(epsilon_arg), discount(discount_arg)
 {
     if(initialiser() == -1)
         exit(1);
 }
 
-AI(reward_repartition rep, std::string filename, float epsilon_arg) : r(rep), epsilon(epsilon_arg);
+AI(reward_repartition rep, std::string filename, float epsilon_arg, float discount_arg) : r(rep), epsilon(epsilon_arg), discount(discount_arg)
 {
     if(initialiser(filename) == -1)
         exit(1);
@@ -663,9 +664,6 @@ Gradient::~Gradient()
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
         free(dbiases[u]);
     dbiases.clear();
-    for(uint32_t u2 = 0; u2 < parent->network_size.size() - 1; ++u2)
-        free(d[u2]);
-    d.clear();
     for(uint32_t u3 = 0; u3 < parent->network_size.size() - 1; ++u3)
     {
         for(uint32_t u4 = 0; u4 < parent->network_size[u3 + 1]; ++u4)
@@ -685,35 +683,31 @@ int8_t Gradient::backward_pass(uint32_t selected, bool quad)
     for(uint32_t u = 0; u < parent->network_size[parent->network_size.size() - 1]; ++u)
     {
 
-        //d
-        if(quad)
-            d[parent->network_size.size() - 2][u] = dQuadratic_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]);
-        else
-            d[parent->network_size.size() - 2][u] = dCross_Entropy_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]); 
-
         //db
-        dbiases[parent->network_size.size() - 2][u] = d[parent->network_size.size() - 2][u];
+        if(quad)
+            dbiases[parent->network_size.size() - 2][u] = dQuadratic_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]);
+        else
+            dbiases[parent->network_size.size() - 2][u] = dCross_Entropy_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]); 
+
 
         //dw 
         for(uint32_t x = 0; x < parent->network_size[parent->network_size.size() - 2]; ++x)
-            dweights[parent->network_size.size() - 2][u][x] = d[parent->network_size.size() - 2][u] * parent->neurons[parent->network_size.size() - 2][x];  
+            dweights[parent->network_size.size() - 2][u][x] = dbiases[parent->network_size.size() - 2][u] * parent->neurons[parent->network_size.size() - 2][x];  
     }
 
     for(uint32_t c = parent->network_size.size() - 3; c >= 0; --c)
     {
         for(uint32_t u = 0; u < parent->network_size[c + 1]; ++u)
         {
-            //d
+            //db
             for(uint32_t v = 0; v < parent->network_size[c + 2]; ++v)
-                d[c][u] += d[c + 1][v] * parent->weights[c + 1][v][c];
-            d[c][u] *= parent->drectifiers[c](parent->z[c][u]);
+                dbiases[c][u] += d[c + 1][v] * parent->weights[c + 1][v][c];
+            dbiases[c][u] *= parent->drectifiers[c](parent->z[c][u]);
 
-            //b
-            dbiases[c][u] = d[c][u];
 
             //dw
             for(uint32_t w = 0; w < parent->network_size[c]; ++w)
-                dweights[c][u][w] = d[c][u] * parent->neurons[c][w];
+                dweights[c][u][w] = dbiases[c][u] * parent->neurons[c][w];
         }
         
     }
@@ -755,7 +749,6 @@ int8_t Gradient::gradient_set_0()
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
             dbiases[u][m] = 0.0;
-            d[u][m] = 0.0;
             for(uint32_t n = 0; parent->network_size[u]; ++n)
                 dweights[u][m][n] = 0.0;
         }
@@ -805,32 +798,11 @@ int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
 
     for(uint32_t u = 0; u < network_size.size() - 1; ++u)
     {
-        float *tab = (float *) malloc(network_size[u + 1] * sizeof(float));
-        if(tab == NULL)
-        {
-            std::cout << "Malloc Error"<< std::endl;
-            for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
-                free(dbiases[u2]);
-            for(uint32_t u3 = 0; u3 < d.size(); ++u3)
-                free(d[u3]);
-            return -1;
-        }
-        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
-            tab[v] = 0.0; 
-
-        d.push_back(tab);
-
-    }
-
-    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
-    {
 
         float **tab2 = (float **) malloc(network_size[u + 1] * sizeof(float*));
         if(tab2 == NULL)
         {
             std::cout << "Malloc Error"<< std::endl;
-            for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
-                free(d[u2]);
             for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
                 free(dbiases[u3]);
             for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)
@@ -847,8 +819,6 @@ int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
             if(tab2[v] == NULL)
             {
                 std::cout << "Malloc Error"<< std::endl;
-                for(uint32_t u2 = 0; u2 < network_size.size() - 1; ++u2)
-                    free(d[u2]);
                 for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
                     free(dbiases[u3]);
                 for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)

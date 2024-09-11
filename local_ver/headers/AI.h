@@ -45,8 +45,8 @@ public:
     //!FUNC
 
     AI();
-    AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vector<float (*)(float)> &rectifiers_arg, std::vector<float (*)(float)> &drectifiers_arg, float epsilon_arg);
-    AI(reward_repartition rep, std::string filename, float epsilon_arg);
+    AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vector<float (*)(float)> &rectifiers_arg, std::vector<float (*)(float)> &drectifiers_arg, float epsilon_arg, float discount_arg);
+    AI(reward_repartition rep, std::string filename, float epsilon_arg, float discount_arg);
     virtual ~AI();
     std::string action(std::string &env);
     std::string forward_pass(std::strin &env);
@@ -68,6 +68,7 @@ public:
     std::vector<float (*)(float)> rectifiers;
     std::vector<float (*)(float)> drectifiers;
     float epsilon;
+    float discount;
 protected:
 };
 
@@ -75,7 +76,6 @@ class Gradient
 {
 public:
     //!FUNC
-
     Gradient(AI *arg);
     virtual ~Gradient();
     int8_t backward_pass(uint32_t selected, bool quad);
@@ -89,7 +89,6 @@ public:
 
     std::vector<float**> dweights;
     std::vector<float*> dbiases;
-    std::vector<float*> d;
     AI* parent;
 protected:
 };
