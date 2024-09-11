@@ -1,5 +1,7 @@
 #include "../headers/train.h"
 
+BITE
+
 int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int32_t,int32_t> *apples, std::pair<int32_t,int32_t> *walls, bool* alive, float *rewards, Gradient *gradients, AI *ai, uint32_t game_step)
 {
     for(uint32_t r = 0; r < PLAYERS; ++r)
@@ -49,7 +51,7 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
             env += "(" + std::to_string(snakes[p2][0].second) + ", " + std::to_string(snakes[p2][0].first) + ")";
         }
 
-        directions[p] = new_AI.action(env);
+        directions[p] = ai->action(env);
     }
 
     //CALCULATION
@@ -94,6 +96,11 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
             {
                 snakes[p].push_back(snakes[p][snakes[p].size() - 1]);
                 rewards[p] += ai->r.eat;
+
+                bool out;
+
+                std::pair<int32_t,int32_t> buffer;
+
                 for(uint32_t t = 0; t < 50; ++t)
                 {
                     if(t == 49)
@@ -102,9 +109,9 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
                         apples[a].second = -2;
                     }
 
-                    std::pair<int32_t,int32_t> buffer(rand() % WIDTH, rand() % HEIGHT);
+                    std::pair<int32_t,int32_t> buffer = std::pair<int32_t,int32_t>(rand() % WIDTH, rand() % HEIGHT);
 
-                    bool out = false;
+                    out = false;
                     for(uint32_t s = 0; s < PLAYERS; ++s)
                     {
                         for(uint32_t b = 0; b < snakes[p].size(); ++b)
@@ -171,7 +178,7 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
                 continue;
             }
 
-            if(snakes[p][0].second < 0 || snakes[p][0].second >= HEIGHT
+            if(snakes[p][0].second < 0 || snakes[p][0].second >= HEIGHT)
             {
                 to_be_alive[p] = false;
                 rewards[p] += ai->r.die;
@@ -368,7 +375,7 @@ void rewards_set_0(float **rewards)
     }
 }
 
-int8_t train()
+int8_t train(std::string input)
 {
 
     AI new_AI = AI();   
@@ -378,21 +385,40 @@ int8_t train()
     std::pair<int32_t,int32_t> walls[NB_WALLS];
     bool alive[PLAYERS];
     
-    float rewards[GAME_STEPS][PLAYERS];
+    //float rewards[GAME_STEPS][PLAYERS];
+    float **rewards = (float**) malloc(GAME_STEPS * sizeof(float*));
+    if(rewards == NULL)
+    {
+        std::cout << "Malloc error" << std::endl;
+        return -1;
+    }
+    for(uint32_t g = 0; g < GAME_STEPS; ++g)
+    {
+        rewards[g] = (float*) malloc(PLAYERS * sizeof(float));
+        if(rewards[g] == NULL)
+        {
+            std::cout << "Malloc error" << std::endl;
+            for(uint32_t g2 = 0; g2 < g; ++g2)
+                free(rewards[g2]);
+            free(rewards);
+            return -1;
+        }
+    }
+
     float add;
 
     Gradient temp_gradients[GAME_STEPS][PLAYERS];
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
     {
         for(uint32_t p = 0; p < PLAYERS; ++p)
-            gradients[g][p] = Gradient(new_AI);
+            gradients[g][p] = Gradient(&new_AI);
     }
 
     Gradient gradients[GAME_STEPS][PLAYERS];
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
     {
         for(uint32_t p = 0; p < PLAYERS; ++p)
-            gradients[g][p] = Gradient(new_AI);
+            gradients[g][p] = Gradient(&new_AI);
     }
 
     for(uint32_t u = 0; u < GENS / BATCH_SIZE; ++u)
@@ -401,7 +427,7 @@ int8_t train()
         for(uint32_t g = 0; g < GAME_STEPS; ++g)
         {
             for(uint32_t p = 0; p < PLAYERS; ++p)
-                gradients[g][p].gradient_set_0;
+                gradients[g][p].gradient_set_0();
         }
 
         for(uint32_t b = 0; b < BATCH_SIZE; ++b)
@@ -418,12 +444,12 @@ int8_t train()
                 return -1;
 
             //GAME
-            bool cont = true;
+            int8_t cont = 1;
             uint32_t game_steps = 0;
             while(cont && game_steps < GAME_STEPS)
             {
 
-                cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],temp_gradients[game_steps],new_AI,game_steps);
+                cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],temp_gradients[game_steps],&new_AI,game_steps);
 
                 if(cont == -1)
                     return -1;
@@ -438,9 +464,9 @@ int8_t train()
                 {
                     add = 0.0;
                     for(uint32_t h = g; h < GAME_STEPS; ++h)
-                        add += rewards[h][p] * std::pow(new_AI.disount,h - g);      
-                    temp_gradient[g][p].gradient_mult(add);
-                    gradient[g][p].gradient_add(temp_gradient[g][p]);
+                        add += rewards[h][p] * std::pow(new_AI.discount,h - g);      
+                    temp_gradients[g][p].gradient_mult(add);
+                    gradients[g][p].gradient_add(temp_gradient[g][p]);
                 }
             }
 
@@ -454,6 +480,10 @@ int8_t train()
         }
 
     }
+
+    for(uint32_t g = 0; g < GAME_STEPS; ++g)
+        free(rewards[g]);
+    free(rewards);
 
     if(new_AI.write(input) != 0)
         return -1;

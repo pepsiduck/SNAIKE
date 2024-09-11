@@ -2,7 +2,7 @@ CC=g++
 CFLAGS=-Wall -Werror -g
 INCLUDE_HEADERS_DIRECTORY=-Iheaders
 
-SNAIKE: main.cpp src/train.cpp src/AI.cpp
+SNAIKE: main.cpp src/train.cpp src/AI.cpp 
 	$(CC) $(INCLUDE_HEADERS_DIRECTORY) $(CFLAGS) -o $@ $^ 
 
 %.o: %.cpp                  

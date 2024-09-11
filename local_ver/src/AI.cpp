@@ -126,7 +126,7 @@ std::string AI::action(std::string &env)
     return "DOWN";
 }
 
-std::string AI:forward_pass(std::string &env)
+std::string AI::forward_pass(std::string &env)
 {
     std::string s1 = "";
     std::string s2 = "";
@@ -371,7 +371,7 @@ int32_t AI::initialiser()
     
 }
 
-int32_t initialiser(std::string filepath)
+int32_t AI::initialiser(std::string filepath)
 {
     FILE *fp = std::fopen(filename.c_str(), "rb");
     if(fp == NULL)
@@ -582,7 +582,7 @@ int32_t initialiser(std::string filepath)
     return 0;
 }
 
-int32_t write(std::string filename) const
+int32_t AI::write(std::string filename) const
 {
     FILE *fp = std::fopen(filename.c_str(), "wb");
     if(fp == NULL)
@@ -650,6 +650,11 @@ int32_t write(std::string filename) const
 
     std::fclose(fp);
     return 0;
+}
+
+Gradient::Gradient()
+{
+
 }
 
 Gradient::Gradient(AI *arg)

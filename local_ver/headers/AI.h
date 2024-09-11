@@ -49,7 +49,7 @@ public:
     AI(reward_repartition rep, std::string filename, float epsilon_arg, float discount_arg);
     virtual ~AI();
     std::string action(std::string &env);
-    std::string forward_pass(std::strin &env);
+    std::string forward_pass(std::string &env);
     float getEpsilon() const;
     void setEpsilon(float arg);
     int32_t initialiser();
@@ -76,6 +76,7 @@ class Gradient
 {
 public:
     //!FUNC
+    Gradient();
     Gradient(AI *arg);
     virtual ~Gradient();
     int8_t backward_pass(uint32_t selected, bool quad);

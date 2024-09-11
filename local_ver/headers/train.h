@@ -18,6 +18,6 @@ int8_t snake_reset(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<in
 
 void rewards_set_0(float **rewards);
 
-int8_t train();
+int8_t train(std::string input);
 
 #endif
