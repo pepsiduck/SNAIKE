@@ -1,6 +1,6 @@
 #include "../headers/train.h"
 
-BITE
+std::string directions[PLAYERS] = {"","","","","",""};
 
 int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int32_t,int32_t> *apples, std::pair<int32_t,int32_t> *walls, bool* alive, float *rewards, Gradient *gradients, AI *ai, uint32_t game_step)
 {
@@ -411,7 +411,7 @@ int8_t train(std::string input)
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
     {
         for(uint32_t p = 0; p < PLAYERS; ++p)
-            gradients[g][p] = Gradient(&new_AI);
+            temp_gradients[g][p] = Gradient(&new_AI);
     }
 
     Gradient gradients[GAME_STEPS][PLAYERS];
@@ -466,7 +466,7 @@ int8_t train(std::string input)
                     for(uint32_t h = g; h < GAME_STEPS; ++h)
                         add += rewards[h][p] * std::pow(new_AI.discount,h - g);      
                     temp_gradients[g][p].gradient_mult(add);
-                    gradients[g][p].gradient_add(temp_gradient[g][p]);
+                    gradients[g][p].gradient_add(temp_gradients[g][p]);
                 }
             }
 
@@ -476,7 +476,7 @@ int8_t train(std::string input)
         for(uint32_t p = 0; p < PLAYERS; ++p)
         {
             for(uint32_t g = 0; g < GAME_STEPS; ++g)
-                gradient[g][p].gradient_apply();
+                gradients[g][p].gradient_apply();
         }
 
     }

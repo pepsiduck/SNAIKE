@@ -84,7 +84,7 @@ public:
     int8_t gradient_add(Gradient &add);
     int8_t gradient_set_0();
     int8_t gradient_apply() const;
-    int32_t initaliser(std::vector<uint32_t> &network_size_arg);
+    int32_t initialiser(std::vector<uint32_t> &network_size_arg);
 
     //!VAR
 

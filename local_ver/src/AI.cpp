@@ -87,7 +87,7 @@ AI::AI(reward_repartition rep, std::vector<uint32_t> &network_size_arg, std::vec
         exit(1);
 }
 
-AI(reward_repartition rep, std::string filename, float epsilon_arg, float discount_arg) : r(rep), epsilon(epsilon_arg), discount(discount_arg)
+AI::AI(reward_repartition rep, std::string filename, float epsilon_arg, float discount_arg) : r(rep), epsilon(epsilon_arg), discount(discount_arg)
 {
     if(initialiser(filename) == -1)
         exit(1);
@@ -109,7 +109,7 @@ AI::~AI()
     }
     weights.clear();
     for(uint32_t u5 = 0; u5 < network_size.size() - 1; ++u5)
-        free(z[u2]);
+        free(z[u5]);
     z.clear();
     network_size.clear();
 }
@@ -130,14 +130,17 @@ std::string AI::forward_pass(std::string &env)
 {
     std::string s1 = "";
     std::string s2 = "";
+
+    bool s1_active = true;
     
-    while(std::getline(env, s2, '|'))
+    for(uint32_t s = 0; s < env.size(); ++s)
     {
-        if(s1 == "")
-        {
-            s1 = s2;
-            s2 = "";
-        }
+        if(env[s] == '|')
+            s1_active = false;
+        else if(s1_active)
+            s1 += env[s];
+        else
+            s2 += env[s];
     }
 
     uint32_t u = 0;
@@ -153,9 +156,10 @@ std::string AI::forward_pass(std::string &env)
     }
 
     bool out = false;
-    for(uint32_t h = 0; h < HEIGHT; ++h)
+    uint32_t w, h;
+    for(h = 0; h < HEIGHT; ++h)
     {
-        for(uint32_t w = 0; w < WIDTH; ++w)
+        for(w = 0; w < WIDTH; ++w)
         {
             if(s1[h * WIDTH + w] == '*')
             {
@@ -177,13 +181,13 @@ std::string AI::forward_pass(std::string &env)
         {
             ++u;
             if(u < network_size.size())
-                neurons[u] = 0.0;
+                neurons[u] = 0;
         }
         else if(s2[s] >= '0' || s2[s] <= '9')
             neurons[0][u] = neurons[0][u] * 10 + (s2[s] - '0');
     }
 
-    for(uint32_t m = 1; m < network_size(); ++m)
+    for(uint32_t m = 1; m < network_size.size(); ++m)
     {
         for(uint32_t n = 0; n < network_size[m]; ++n)
         {
@@ -373,7 +377,7 @@ int32_t AI::initialiser()
 
 int32_t AI::initialiser(std::string filepath)
 {
-    FILE *fp = std::fopen(filename.c_str(), "rb");
+    FILE *fp = std::fopen(filepath.c_str(), "rb");
     if(fp == NULL)
     {
         std::cout << "Could not open AI file" << std::endl;
@@ -381,20 +385,20 @@ int32_t AI::initialiser(std::string filepath)
     }
 
     std::fseek(fp,0,SEEK_END);
-    long size = std::ftell(fp);
+    unsigned long size = std::ftell(fp);
     std::fseek(fp,0,SEEK_SET);
 
     size_t buffer;
     if(std::fread((void*) (&buffer), sizeof(size_t), 1, fp) != 0)
     {
         std::cout << "Could not read AI file" << std::endl;
-        fp.close();
+        std::fclose(fp);
         return -1;
     }
     if(size - std::ftell(fp) < sizeof(uint32_t) * buffer)
     {
         std::cout << "Could not read AI file" << std::endl;
-        fp.close();
+        std::fclose(fp);
         return -1;
     }
 
@@ -404,7 +408,7 @@ int32_t AI::initialiser(std::string filepath)
         if(std::fread((void*) (&buffer2), sizeof(uint32_t), 1, fp) != 0)
         {
             std::cout << "Could not read AI file" << std::endl;
-            fp.close();
+            std::fclose(fp);
             return -1;
         }
         network_size.push_back(buffer2);
@@ -413,7 +417,7 @@ int32_t AI::initialiser(std::string filepath)
     if(size - std::ftell(fp) < sizeof(uint8_t) * (buffer - 1))
     {
         std::cout << "Could not read AI file" << std::endl;
-        fp.close();
+        std::fclose(fp);
         return -1;
     }
 
@@ -423,7 +427,7 @@ int32_t AI::initialiser(std::string filepath)
         if(std::fread((void*) (&buffer3), sizeof(uint8_t), 1, fp) != 0)
         {
             std::cout << "Could not read AI file" << std::endl;
-            fp.close();
+            std::fclose(fp);
             return -1;
         }
         if(buffer3 == 0)
@@ -445,7 +449,7 @@ int32_t AI::initialiser(std::string filepath)
     if(size - std::ftell(fp) < sizeof(float) * nb)
     {
         std::cout << "Could not read AI file" << std::endl;
-        fp.close();
+        std::fclose(fp);
         return -1;
     }
 
@@ -457,7 +461,7 @@ int32_t AI::initialiser(std::string filepath)
             std::cout << "Malloc error" << std::endl;
             for(uint32_t v = 0; v < biases.size(); ++v)
                 free(biases[v]);
-            fp.close();
+            std::fclose(fp);
             return -1;
         }
         if(fread((void*) tab, sizeof(float), network_size[u + 1],fp) != 0)
@@ -465,7 +469,7 @@ int32_t AI::initialiser(std::string filepath)
             std::cout << "Could not read AI file" << std::endl;
             for(uint32_t v = 0; v < biases.size(); ++v)
                 free(biases[v]);
-            fp.close();
+            std::fclose(fp);
             return -1;
         }
         biases.push_back(tab);
@@ -479,13 +483,13 @@ int32_t AI::initialiser(std::string filepath)
             std::cout << "Malloc error" << std::endl;
             for(uint32_t v = 0; v < biases.size(); ++v)
                 free(biases[v]);
-            for(uint32_t v = 0; v < weight.size(); ++v)
+            for(uint32_t v = 0; v < weights.size(); ++v)
             {
                 for(uint32_t w = 0; w < network_size[v + 1]; ++w)
                     free(weights[v][w]);
                 free(weights[v]);
             }
-            fp.close();
+            std::fclose(fp);
             return -1;
         }
         for(uint32_t u2 = 0; u2 < network_size[u + 1]; ++u2)
@@ -496,7 +500,7 @@ int32_t AI::initialiser(std::string filepath)
                 std::cout << "Malloc error" << std::endl;
                 for(uint32_t v = 0; v < biases.size(); ++v)
                     free(biases[v]);
-                for(uint32_t v = 0; v < weight.size(); ++v)
+                for(uint32_t v = 0; v < weights.size(); ++v)
                 {
                     for(uint32_t w = 0; w < network_size[v + 1]; ++w)
                         free(weights[v][w]);
@@ -505,15 +509,15 @@ int32_t AI::initialiser(std::string filepath)
                 for(uint32_t u3 = 0; u3 < u2; ++u3)
                     free(tab2[u3]);
                 free(tab2);
-                fp.close();
+                std::fclose(fp);
                 return -1;
             }
-            if(fread((void*) tab[u2], sizeof(float), network_size[u], fp) != 0)
+            if(fread((void*) tab2[u2], sizeof(float), network_size[u], fp) != 0)
             {
                 std::cout << "Could not read in AI file" << std::endl;
                 for(uint32_t v = 0; v < biases.size(); ++v)
                     free(biases[v]);
-                for(uint32_t v = 0; v < weight.size(); ++v)
+                for(uint32_t v = 0; v < weights.size(); ++v)
                 {
                     for(uint32_t w = 0; w < network_size[v + 1]; ++w)
                         free(weights[v][w]);
@@ -522,14 +526,14 @@ int32_t AI::initialiser(std::string filepath)
                 for(uint32_t u3 = 0; u3 < u2; ++u3)
                     free(tab2[u3]);
                 free(tab2);
-                fp.close();
+                std::fclose(fp);
                 return -1;
             }
         }
         weights.push_back(tab2);
     }
 
-    fp.close();
+    std::fclose(fp);
 
     for(uint32_t u = 0; u < buffer; ++u)
     {
@@ -539,7 +543,7 @@ int32_t AI::initialiser(std::string filepath)
             std::cout << "Malloc error" << std::endl;
             for(uint32_t v = 0; v < biases.size(); ++v)
                 free(biases[v]);
-            for(uint32_t v = 0; v < weight.size(); ++v)
+            for(uint32_t v = 0; v < weights.size(); ++v)
             {
                 for(uint32_t w = 0; w < network_size[v + 1]; ++w)
                     free(weights[v][w]);
@@ -561,7 +565,7 @@ int32_t AI::initialiser(std::string filepath)
             std::cout << "Malloc error" << std::endl;
             for(uint32_t v = 0; v < biases.size(); ++v)
                 free(biases[v]);
-            for(uint32_t v = 0; v < weight.size(); ++v)
+            for(uint32_t v = 0; v < weights.size(); ++v)
             {
                 for(uint32_t w = 0; w < network_size[v + 1]; ++w)
                     free(weights[v][w]);
@@ -590,20 +594,24 @@ int32_t AI::write(std::string filename) const
         std::cout << "Could not create AI file" << std::endl;
         return -1;
     }
+    
+    size_t to_write = network_size.size();
 
-    if(std::fwrite((void *) (&network_size.size), sizeof(network_size.size()), 1, fp) != 0)
+    if(std::fwrite((void *) (&to_write), sizeof(network_size.size()), 1, fp) != 0)
     {
         std::cout << "Could not write in AI file" << std::endl;
-        fp.close();
-        std::system("rm -f " + filepath);
+        std::fclose(fp);
+        std::string command = "rm -f " + filename;
+        std::system(command.c_str());
         return -1;
     }
 
     if(std::fwrite(network_size.data(), sizeof(network_size[0]), network_size.size(), fp) != 0)
     {
         std::cout << "Could not write in AI file" << std::endl;
-        fp.close();
-        std::system("rm -f " + filepath);
+        std::fclose(fp);
+        std::string command = "rm -f " + filename;
+        std::system(command.c_str());
         return -1;
     }
 
@@ -617,8 +625,9 @@ int32_t AI::write(std::string filename) const
         if(std::fwrite((void *) (&elem), sizeof(uint8_t), 1, fp) != 0)
         {
             std::cout << "Could not write in AI file" << std::endl;
-            fp.close();
-            std::system("rm -f " + filepath);
+            std::fclose(fp);
+            std::string command = "rm -f " + filename;
+            std::system(command.c_str());
             return -1;
         }
     }
@@ -628,8 +637,9 @@ int32_t AI::write(std::string filename) const
         if(std::fwrite(biases[u], sizeof(float), network_size[u + 1], fp) != 0)
         {
             std::cout << "Could not write in AI file" << std::endl;
-            fp.close();
-            std::system("rm -f " + filepath);
+            std::fclose(fp);
+            std::string command = "rm -f " + filename;
+            std::system(command.c_str());
             return -1;
         }
     }
@@ -641,8 +651,9 @@ int32_t AI::write(std::string filename) const
             if(std::fwrite(weights[u][v], sizeof(float), network_size[u], fp) != 0)
             {
                 std::cout << "Could not write in AI file" << std::endl;
-                fp.close();
-                std::system("rm -f " + filepath);
+                std::fclose(fp);
+                std::string command = "rm -f " + filename;
+                std::system(command.c_str());
                 return -1;
             }
         }
@@ -706,7 +717,7 @@ int8_t Gradient::backward_pass(uint32_t selected, bool quad)
         {
             //db
             for(uint32_t v = 0; v < parent->network_size[c + 2]; ++v)
-                dbiases[c][u] += d[c + 1][v] * parent->weights[c + 1][v][c];
+                dbiases[c][u] += dbiases[c + 1][v] * parent->weights[c + 1][v][c];
             dbiases[c][u] *= parent->drectifiers[c](parent->z[c][u]);
 
 
@@ -741,7 +752,7 @@ int8_t Gradient::gradient_add(Gradient &add)
         {
             dbiases[u][m] += add.dbiases[u][m];
             for(uint32_t n = 0; parent->network_size[u]; ++n)
-                dweights[u][m][n] += add += dweights[u][m][n];
+                dweights[u][m][n] += add.dweights[u][m][n];
         }
     }
     return 0;
@@ -775,18 +786,18 @@ int8_t Gradient::gradient_apply() const
     return 0;
 }
 
-int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
+int32_t Gradient::initialiser(std::vector<uint32_t> &network_size_arg)
 {
-    if(network_size.size() < 2)
+    if(network_size_arg.size() < 2)
     {
         std::cout << "Need multiple neurons layers" << std::endl;
         return -1;
     }
 
 
-    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    for(uint32_t u = 0; u < network_size_arg.size() - 1; ++u)
     {
-        float *tab = (float *) malloc(network_size[u + 1] * sizeof(float));
+        float *tab = (float *) malloc(network_size_arg[u + 1] * sizeof(float));
         if(tab == NULL)
         {
             std::cout << "Malloc Error"<< std::endl;
@@ -794,41 +805,41 @@ int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
                 free(dbiases[u3]);
             return -1;
         }
-        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
+        for(uint32_t v = 0; v < network_size_arg[u + 1]; ++v)
             tab[v] = 0.0; 
 
         dbiases.push_back(tab);
 
     }
 
-    for(uint32_t u = 0; u < network_size.size() - 1; ++u)
+    for(uint32_t u = 0; u < network_size_arg.size() - 1; ++u)
     {
 
-        float **tab2 = (float **) malloc(network_size[u + 1] * sizeof(float*));
+        float **tab2 = (float **) malloc(network_size_arg[u + 1] * sizeof(float*));
         if(tab2 == NULL)
         {
             std::cout << "Malloc Error"<< std::endl;
-            for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
+            for(uint32_t u3 = 0; u3 < network_size_arg.size() - 1; ++u3)
                 free(dbiases[u3]);
             for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)
             {
-                for(uint32_t v = 0; v < network_size[u4 + 1]; ++v)
+                for(uint32_t v = 0; v < network_size_arg[u4 + 1]; ++v)
                     free(dweights[u4][v]);
                 free(dweights[u4]);
             }
             return -1;
         }
-        for(uint32_t v = 0; v < network_size[u + 1]; ++v)
+        for(uint32_t v = 0; v < network_size_arg[u + 1]; ++v)
         {
-            tab2[v] = (float *) malloc(network_size[u] * sizeof(float));
+            tab2[v] = (float *) malloc(network_size_arg[u] * sizeof(float));
             if(tab2[v] == NULL)
             {
                 std::cout << "Malloc Error"<< std::endl;
-                for(uint32_t u3 = 0; u3 < network_size.size() - 1; ++u3)
+                for(uint32_t u3 = 0; u3 < network_size_arg.size() - 1; ++u3)
                     free(dbiases[u3]);
                 for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)
                 {
-                    for(uint32_t v2 = 0; v2 < network_size[u4 + 1]; ++v2)
+                    for(uint32_t v2 = 0; v2 < network_size_arg[u4 + 1]; ++v2)
                         free(dweights[u4][v2]);
                     free(dweights[u4]);
                 }
@@ -838,7 +849,7 @@ int32_t Gradient::initaliser(std::vector<uint32_t> &network_size_arg)
                 return -1;
             }
             
-            for(uint32_t v2 = 0; v2 < network_size[u]; ++v2)
+            for(uint32_t v2 = 0; v2 < network_size_arg[u]; ++v2)
                 tab2[v][v2] = 0.0; 
 
         }

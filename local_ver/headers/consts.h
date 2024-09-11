@@ -13,7 +13,5 @@
 #define GENS 1000
 #define GAME_STEPS 2500
 #define BATCH_SIZE 10
-
-std::string directions[PLAYERS];
     
 #endif
