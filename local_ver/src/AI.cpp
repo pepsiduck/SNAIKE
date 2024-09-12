@@ -66,8 +66,8 @@ AI::AI()
 {
     r.advance = -1;
     r.eat = 10;
-    r.kill = 100;
-    r.die = -30;
+    r.kill = 75;
+    r.die = -100;
     network_size.push_back(887);
     network_size.push_back(10);
     network_size.push_back(4);
@@ -778,9 +778,9 @@ int8_t Gradient::gradient_apply() const
     {
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
-            parent->biases[u][m] -= dbiases[u][m];
+            parent->biases[u][m] -= ETA * dbiases[u][m];
             for(uint32_t n = 0; n < parent->network_size[u]; ++n)
-                parent->weights[u][m][n] -= dweights[u][m][n];
+                parent->weights[u][m][n] -= ETA * dweights[u][m][n];
         }
     }
     return 0;

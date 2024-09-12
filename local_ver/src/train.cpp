@@ -378,6 +378,10 @@ void rewards_set_0(float **rewards)
 int8_t train(std::string input)
 {
 
+    std::cout << "Beginning training" << std::endl;
+
+    std::cout << "Allocating memory" << std::endl;
+
     AI new_AI = AI();   
 
     std::vector<std::pair<int32_t,int32_t>> snakes[PLAYERS];
@@ -421,8 +425,16 @@ int8_t train(std::string input)
             gradients[g][p] = Gradient(&new_AI);
     }
 
+    uint32_t survived[PLAYERS];
+    float total_reward[PLAYERS];
+
+    std::cout << "Beginning games" << std::endl;
+
     for(uint32_t u = 0; u < GENS / BATCH_SIZE; ++u)
     {
+
+        std::cout << "Generation " << u << std::endl;
+        std::cout << std::endl;
 
         for(uint32_t g = 0; g < GAME_STEPS; ++g)
         {
@@ -432,6 +444,10 @@ int8_t train(std::string input)
 
         for(uint32_t b = 0; b < BATCH_SIZE; ++b)
         {
+
+            std::cout << "Game " << b << std::endl;
+            std::cout << std::endl;            
+
             rewards_set_0(rewards);
 
             for(uint32_t g = 0; g < GAME_STEPS; ++g)
@@ -460,6 +476,10 @@ int8_t train(std::string input)
 
             for(uint32_t p = 0; p < PLAYERS; ++p)
             {
+
+                total_reward[p] = 0;
+                survived[p] = 0;
+
                 for(uint32_t g = 0; g < GAME_STEPS; ++g)
                 {
                     add = 0.0;
@@ -467,8 +487,19 @@ int8_t train(std::string input)
                         add += rewards[h][p] * std::pow(new_AI.discount,h - g);      
                     temp_gradients[g][p].gradient_mult(add);
                     gradients[g][p].gradient_add(temp_gradients[g][p]);
+
+                    if(rewards[g][p] != 0)
+                    {
+                        total_reward[p] += rewards[g][p];
+                        survived[p]++;
+                    }
                 }
+
+                std::cout << "Player 1 : Survived Frames : " << survived[p] << " | Total Reward : " << total_reward[p] << " | Size : " << snakes[p].size() << std::endl;        
+
             }
+
+            
 
 
         }
@@ -481,12 +512,26 @@ int8_t train(std::string input)
 
     }
 
+    std::cout << "Freeing memory" << std::endl;
+
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
         free(rewards[g]);
     free(rewards);
 
-    if(new_AI.write(input) != 0)
-        return -1;
+    std::string response = "";
+
+    while(response != "y" || responde != "n")
+    {
+        std::cout << "Saving data [y/n]?" << std::endl;
+        std::cin >> response;
+    }
+
+    if(response == "y")
+    {
+        if(new_AI.write(input) != 0)
+            return -1;
+        std::cout << "Data saved" << std::endl;
+    }
 
     return 0;
 }
