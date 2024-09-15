@@ -76,12 +76,11 @@ class Gradient
 {
 public:
     //!FUNC
-    Gradient();
     Gradient(AI *arg);
     virtual ~Gradient();
     int8_t backward_pass(uint32_t selected, bool quad);
     int8_t gradient_mult(float mult);
-    int8_t gradient_add(Gradient &add);
+    int8_t gradient_add(Gradient *add);
     int8_t gradient_set_0();
     int8_t gradient_apply() const;
     int32_t initialiser(std::vector<uint32_t> &network_size_arg);

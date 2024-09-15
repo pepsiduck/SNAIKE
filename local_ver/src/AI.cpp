@@ -663,11 +663,6 @@ int32_t AI::write(std::string filename) const
     return 0;
 }
 
-Gradient::Gradient()
-{
-
-}
-
 Gradient::Gradient(AI *arg)
 {
     parent = arg;
@@ -677,6 +672,9 @@ Gradient::Gradient(AI *arg)
 
 Gradient::~Gradient()
 {
+
+    std::cout << "b" << std::endl;
+
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
         free(dbiases[u]);
     dbiases.clear();
@@ -744,15 +742,15 @@ int8_t Gradient::gradient_mult(float mult)
     return 0;
 }
 
-int8_t Gradient::gradient_add(Gradient &add)
+int8_t Gradient::gradient_add(Gradient *add)
 {
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
     {
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
-            dbiases[u][m] += add.dbiases[u][m];
-            for(uint32_t n = 0; parent->network_size[u]; ++n)
-                dweights[u][m][n] += add.dweights[u][m][n];
+            dbiases[u][m] += add->dbiases[u][m];
+            for(uint32_t n = 0; n < parent->network_size[u]; ++n)
+                dweights[u][m][n] += add->dweights[u][m][n];
         }
     }
     return 0;
@@ -762,10 +760,11 @@ int8_t Gradient::gradient_set_0()
 {
     for(uint32_t u = 0; u < parent->network_size.size() - 1; ++u)
     {
+
         for(uint32_t m = 0; m < parent->network_size[u + 1]; ++m)
         {
             dbiases[u][m] = 0.0;
-            for(uint32_t n = 0; parent->network_size[u]; ++n)
+            for(uint32_t n = 0; n < parent->network_size[u]; ++n)
                 dweights[u][m][n] = 0.0;
         }
     }
@@ -788,6 +787,7 @@ int8_t Gradient::gradient_apply() const
 
 int32_t Gradient::initialiser(std::vector<uint32_t> &network_size_arg)
 {
+
     if(network_size_arg.size() < 2)
     {
         std::cout << "Need multiple neurons layers" << std::endl;
@@ -829,34 +829,37 @@ int32_t Gradient::initialiser(std::vector<uint32_t> &network_size_arg)
             }
             return -1;
         }
+
+        dweights.push_back(tab2);
+
         for(uint32_t v = 0; v < network_size_arg[u + 1]; ++v)
         {
-            tab2[v] = (float *) malloc(network_size_arg[u] * sizeof(float));
+            dweights[dweights.size() - 1][v] = (float *) malloc(network_size_arg[u] * sizeof(float));
             if(tab2[v] == NULL)
             {
                 std::cout << "Malloc Error"<< std::endl;
                 for(uint32_t u3 = 0; u3 < network_size_arg.size() - 1; ++u3)
                     free(dbiases[u3]);
-                for(uint32_t u4 = 0; u4 < dweights.size(); ++u4)
+                for(uint32_t u4 = 0; u4 < dweights.size() - 1; ++u4)
                 {
                     for(uint32_t v2 = 0; v2 < network_size_arg[u4 + 1]; ++v2)
                         free(dweights[u4][v2]);
                     free(dweights[u4]);
                 }
                 for(uint32_t v3 = 0; v3 < v; ++v3)
-                    free(tab2[v3]);
-                free(tab2);
+                    free(dweights[dweights.size() - 1][v3]);
+                free(dweights[dweights.size() - 1]);
                 return -1;
             }
             
             for(uint32_t v2 = 0; v2 < network_size_arg[u]; ++v2)
-                tab2[v][v2] = 0.0; 
+                dweights[dweights.size() - 1][v][v2] = 0.0; 
 
         }
 
-        dweights.push_back(tab2);
-        
+
     }
 
     return 0;
 }
+

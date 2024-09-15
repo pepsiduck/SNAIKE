@@ -2,7 +2,7 @@
 
 std::string directions[PLAYERS] = {"","","","","",""};
 
-int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int32_t,int32_t> *apples, std::pair<int32_t,int32_t> *walls, bool* alive, float *rewards, Gradient *gradients, AI *ai, uint32_t game_step)
+int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int32_t,int32_t> *apples, std::pair<int32_t,int32_t> *walls, bool* alive, float *rewards, Gradient **gradients, AI *ai, uint32_t game_step)
 {
     for(uint32_t r = 0; r < PLAYERS; ++r)
         rewards[r] = 0.0;
@@ -68,22 +68,22 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
         if(directions[p] == "UP")
         {
             snakes[p][0].second--;
-            gradients[p].backward_pass(0,true);
+            gradients[p]->backward_pass(0,true);
         }
         else if(directions[p] == "DOWN")
         {
             snakes[p][0].second++;
-            gradients[p].backward_pass(3,true);
+            gradients[p]->backward_pass(3,true);
         }
         else if(directions[p] == "RIGHT")
         {
             snakes[p][0].first++;
-            gradients[p].backward_pass(1,true);
+            gradients[p]->backward_pass(1,true);
         }
         else if(directions[p] == "LEFT")
         {
             snakes[p][0].first--;
-            gradients[p].backward_pass(2,true);
+            gradients[p]->backward_pass(2,true);
         }
         else
             return -1;
@@ -363,6 +363,7 @@ int8_t snake_reset(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<in
             break;
         }
     } 
+
     return 0;   
 }
 
@@ -371,7 +372,7 @@ void rewards_set_0(float **rewards)
     for(uint32_t p = 0; p < PLAYERS; ++p)
     {
         for(uint32_t g = 0; g < GAME_STEPS; ++g)
-            rewards[p][g] = 0.0;
+            rewards[g][p] = 0.0;
     }
 }
 
@@ -411,19 +412,23 @@ int8_t train(std::string input)
 
     float add;
 
-    Gradient temp_gradients[GAME_STEPS][PLAYERS];
+    
+
+    Gradient* temp_gradients[GAME_STEPS][PLAYERS];
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
     {
         for(uint32_t p = 0; p < PLAYERS; ++p)
-            temp_gradients[g][p] = Gradient(&new_AI);
+            temp_gradients[g][p] = new Gradient(&new_AI);
     }
 
-    Gradient gradients[GAME_STEPS][PLAYERS];
+    Gradient* gradients[GAME_STEPS][PLAYERS];
     for(uint32_t g = 0; g < GAME_STEPS; ++g)
     {
         for(uint32_t p = 0; p < PLAYERS; ++p)
-            gradients[g][p] = Gradient(&new_AI);
+            gradients[g][p] = new Gradient(&new_AI);
     }
+
+    
 
     uint32_t survived[PLAYERS];
     float total_reward[PLAYERS];
@@ -435,11 +440,11 @@ int8_t train(std::string input)
 
         std::cout << "Generation " << u << std::endl;
         std::cout << std::endl;
-
+        
         for(uint32_t g = 0; g < GAME_STEPS; ++g)
         {
             for(uint32_t p = 0; p < PLAYERS; ++p)
-                gradients[g][p].gradient_set_0();
+                gradients[g][p]->gradient_set_0();
         }
 
         for(uint32_t b = 0; b < BATCH_SIZE; ++b)
@@ -450,12 +455,14 @@ int8_t train(std::string input)
 
             rewards_set_0(rewards);
 
+            
             for(uint32_t g = 0; g < GAME_STEPS; ++g)
             {
                 for(uint32_t p = 0; p < PLAYERS; ++p)
-                    temp_gradients[g][p].gradient_set_0();
+                    temp_gradients[g][p]->gradient_set_0();
             }
 
+            
             if(snake_reset(snakes,apples,walls,alive) == -1)
                 return -1;
 
@@ -465,14 +472,22 @@ int8_t train(std::string input)
             while(cont && game_steps < GAME_STEPS)
             {
 
-                cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],temp_gradients[game_steps],&new_AI,game_steps);
+                std::printf("\rGamestep %u", game_steps);
+                for(uint32_t p = 0; p < PLAYERS; ++p)
+                    std::printf(" | Size_%u : %lu",p,snakes[p].size());
+
+                //cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],*(temp_gradients[game_steps]),&new_AI,game_steps);
 
                 if(cont == -1)
                     return -1;
+
+                std::fflush(stdout);
                 
                 game_steps++;
 
             }
+
+            std::cout << std::endl;
 
             for(uint32_t p = 0; p < PLAYERS; ++p)
             {
@@ -485,8 +500,8 @@ int8_t train(std::string input)
                     add = 0.0;
                     for(uint32_t h = g; h < GAME_STEPS; ++h)
                         add += rewards[h][p] * std::pow(new_AI.discount,h - g);      
-                    temp_gradients[g][p].gradient_mult(add);
-                    gradients[g][p].gradient_add(temp_gradients[g][p]);
+                    temp_gradients[g][p]->gradient_mult(add);
+                    gradients[g][p]->gradient_add(temp_gradients[g][p]);
 
                     if(rewards[g][p] != 0)
                     {
@@ -507,7 +522,7 @@ int8_t train(std::string input)
         for(uint32_t p = 0; p < PLAYERS; ++p)
         {
             for(uint32_t g = 0; g < GAME_STEPS; ++g)
-                gradients[g][p].gradient_apply();
+                gradients[g][p]->gradient_apply();
         }
 
     }
@@ -518,9 +533,21 @@ int8_t train(std::string input)
         free(rewards[g]);
     free(rewards);
 
+    for(uint32_t g = 0; g < GAME_STEPS; ++g)
+    {
+        for(uint32_t p = 0; p < PLAYERS; ++p)
+            delete temp_gradients[g][p];
+    }
+
+    for(uint32_t g = 0; g < GAME_STEPS; ++g)
+    {
+        for(uint32_t p = 0; p < PLAYERS; ++p)
+            delete gradients[g][p];
+    }
+
     std::string response = "";
 
-    while(response != "y" || responde != "n")
+    while(response != "y" || response != "n")
     {
         std::cout << "Saving data [y/n]?" << std::endl;
         std::cin >> response;
