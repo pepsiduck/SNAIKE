@@ -24,6 +24,8 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
               display[snakes[p][b].first + WIDTH * snakes[p][b].second] = char('a' + p);
     }
 
+    std::cout << "A" << std::endl;
+
 
      //DECISION
 
@@ -53,6 +55,8 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
 
         directions[p] = ai->action(env);
     }
+
+    std::cout << "B" << std::endl;
 
     //CALCULATION
 
@@ -88,7 +92,11 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
         else
             return -1;
 
+        std::cout << "C" << std::endl;
+
         rewards[p] += ai->r.advance;
+
+        std::cout << "D" << std::endl;
 
         for(uint32_t a = 0; a < NB_APPLES; ++a)
         {
@@ -158,7 +166,7 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
         }
     }
 
-
+    std::cout << "E" << std::endl;
 
             //DEAD CHECK
 
