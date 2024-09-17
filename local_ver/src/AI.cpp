@@ -199,29 +199,30 @@ std::string AI::forward_pass(std::string &env)
         }
     }
     
-    float div = 0;
-    for(uint32_t l = 0; l < network_size[network_size.size() - 1]; ++l)
-    {
-        if(neurons[network_size.size() - 1][l] > 86.0)
-            neurons[network_size.size() - 1][l] = 86.0;
-        neurons[network_size.size() - 1][l] = std::exp(neurons[network_size.size() - 1][l]);
-        div += neurons[network_size.size() - 1][l];
-    }
-    for(uint32_t l = 0; l < network_size[network_size.size() - 1]; ++l)
-        neurons[network_size.size() - 1][l] /= div;
+    
 
     if(epsilon != 0.0)
     {
+        float div = 0;
+        float res[network_size[network_size.size() - 1]];
+        for(uint32_t l = 0; l < network_size[network_size.size() - 1]; ++l)
+        {
+            res[l] = std::exp(std::min(86.0f,neurons[network_size.size() - 1][l]));
+            div += res[l];
+        }
+        for(uint32_t l = 0; l < network_size[network_size.size() - 1]; ++l)
+            res[l] /= div;
+
         if((std::rand() % 1000) / 1000.0 < epsilon)
         {
             for(uint32_t l = 1; l < network_size[network_size.size() - 1]; ++l)
-                neurons[network_size.size() - 1][l] += neurons[network_size.size() - 1][l - 1];
+                res[l] += res[l - 1];
             div = (std::rand() % 1000) / 1000.0;
-            if(div < neurons[network_size.size() - 1][0])
+            if(div < res[0])
                 return "UP";
-            if(div < neurons[network_size.size() - 1][1])
+            if(div < res[1])
                 return "RIGHT";
-            if(div < neurons[network_size.size() - 1][2])
+            if(div < res[2])
                 return "LEFT";
             return "DOWN";
         }
