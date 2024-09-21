@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Wall -g
+CFLAGS=-Wall -Werror -g
 INCLUDE_HEADERS_DIRECTORY=-Iheaders
 
 SNAIKE: main.cpp src/train.cpp src/AI.cpp 

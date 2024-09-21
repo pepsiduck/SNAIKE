@@ -13,10 +13,10 @@
 typedef struct reward_repartition reward_repartition;
 struct reward_repartition
 {
-    int32_t advance;
-    int32_t eat;
-    int32_t kill;
-    int32_t die;
+    float advance;
+    float eat;
+    float kill;
+    float die;
 };
 
 float sigmoid(float arg);

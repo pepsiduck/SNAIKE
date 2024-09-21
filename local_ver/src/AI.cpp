@@ -64,7 +64,7 @@ float Total_Cross_Entropy_Cost(float *a, float *y, uint32_t size)
 
 AI::AI()
 {
-    r.advance = -1;
+    r.advance = -0.5;
     r.eat = 10;
     r.kill = 75;
     r.die = -100;
@@ -697,7 +697,6 @@ int8_t Gradient::backward_pass(uint32_t selected, bool quad)
 
     for(uint32_t u = 0; u < parent->network_size[parent->network_size.size() - 1]; ++u)
     {
-
         //db
         if(quad)
             dbiases[parent->network_size.size() - 2][u] = dQuadratic_Cost(parent->neurons[parent->network_size.size() - 1][u],u == selected) * parent->drectifiers[parent->network_size.size() - 2](parent->z[parent->network_size.size() - 2][u]);
@@ -710,8 +709,10 @@ int8_t Gradient::backward_pass(uint32_t selected, bool quad)
             dweights[parent->network_size.size() - 2][u][x] = dbiases[parent->network_size.size() - 2][u] * parent->neurons[parent->network_size.size() - 2][x];  
     }
 
-    for(uint32_t c = parent->network_size.size() - 3; c >= 0; --c)
+
+    for(int32_t c = parent->network_size.size() - 3; c >= 0; --c)
     {
+
         for(uint32_t u = 0; u < parent->network_size[c + 1]; ++u)
         {
             //db

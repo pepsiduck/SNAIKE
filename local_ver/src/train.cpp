@@ -24,7 +24,6 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
               display[snakes[p][b].first + WIDTH * snakes[p][b].second] = char('a' + p);
     }
 
-
      //DECISION
 
     for(uint32_t p = 0; p < PLAYERS; ++p)
@@ -158,8 +157,6 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
         }
     }
 
-
-
             //DEAD CHECK
 
     bool to_be_alive[PLAYERS];
@@ -225,7 +222,7 @@ int8_t snake_step(std::vector<std::pair<int32_t,int32_t>> *snakes, std::pair<int
 
     int8_t alive_players = 0;
     for(uint32_t p = 0; p < PLAYERS; ++p)
-        alive_players += alive[p];
+        alive_players += alive[p] == true;
 
     return alive_players > 1; //No more than 127 players
 
@@ -466,34 +463,61 @@ int8_t train(std::string input)
             if(snake_reset(snakes,apples,walls,alive) == -1)
                 return -1;
 
+            for(uint32_t p = 0; p < PLAYERS; ++p)
+                survived[p] = 0;
+
             //GAME
             int8_t cont = 1;
             uint32_t game_steps = 0;
             while(cont && game_steps < GAME_STEPS)
             {
 
-                std::printf("\rGamestep %u", game_steps);
+                std::printf("Gamestep %u", game_steps);
                 for(uint32_t p = 0; p < PLAYERS; ++p)
-                    std::printf(" | Size_%u : %lu",p,snakes[p].size());
+                {
+                    std::printf(" | ");
+                    if(alive[p])
+                        std::printf("Size_");
+                    else
+                        std::printf("Dead_");
+                    std::printf("%u : %lu",p,snakes[p].size());
+                }
+                std::cout << std::endl;
 
-                //cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],*(temp_gradients[game_steps]),&new_AI,game_steps);
+                cont = snake_step(snakes,apples,walls,alive,rewards[game_steps],temp_gradients[game_steps],&new_AI,game_steps);
+
+                for(uint32_t p = 0; p < PLAYERS; ++p)
+                {
+                    if(alive[p])
+                        survived[p]++;
+                }
 
                 if(cont == -1)
                     return -1;
-
-                std::fflush(stdout);
                 
                 game_steps++;
 
             }
 
+            std::printf("Gamestep %u", game_steps);
+            for(uint32_t p = 0; p < PLAYERS; ++p)
+            {
+                std::printf(" | ");
+                if(alive[p])
+                    std::printf("Size_");
+                else
+                    std::printf("Dead_");
+                std::printf("%u : %lu",p,snakes[p].size());
+            }
             std::cout << std::endl;
+            std::cout << std::endl;
+
+            float avg_reward = 0;
 
             for(uint32_t p = 0; p < PLAYERS; ++p)
             {
 
                 total_reward[p] = 0;
-                survived[p] = 0;
 
                 for(uint32_t g = 0; g < GAME_STEPS; ++g)
                 {
@@ -504,17 +528,16 @@ int8_t train(std::string input)
                     gradients[g][p]->gradient_add(temp_gradients[g][p]);
 
                     if(rewards[g][p] != 0)
-                    {
                         total_reward[p] += rewards[g][p];
-                        survived[p]++;
-                    }
                 }
 
-                std::cout << "Player 1 : Survived Frames : " << survived[p] << " | Total Reward : " << total_reward[p] << " | Size : " << snakes[p].size() << std::endl;        
+                std::cout << "Player " << p << " : Survived Frames : " << survived[p] << " | Total Reward : " << total_reward[p] << " | Size : " << snakes[p].size() << std::endl;    
+                avg_reward += total_reward[p];    
 
             }
 
-            
+            std::cout << "Avg reward : " << avg_reward / PLAYERS << std::endl;
+            std::cout << std::endl;
 
 
         }
